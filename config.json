@@ -1,0 +1,6 @@
+{
+    "PROVIDER": "https://comnet.einfachiota.de",
+    "URL": "https://ecosystem.iota.org/search_with_tags.json?tags=einfachiota&object_type=project",
+    "APP_PORT": 5000,
+    "IOTAADDRESS": "EVDIHVXBAOHIQSZPLFBZZLZLMSLQUADNIJCTYCJSEIMPKFVVGC9X9HJHGHJHOJCVSJIIEZHNFUCOSHOFW"
+}
