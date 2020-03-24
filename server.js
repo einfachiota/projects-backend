@@ -70,6 +70,13 @@ low(adapter)
 
         // GET /root
         app.get('/', (req, res) => {
+
+            let testPayment = {
+                txInfo: {
+                    value: 50
+                }
+            }
+            handleDonation(testPayment)
             const root = db.get('config.root')
                 .value()
             res.send(root)
@@ -170,9 +177,8 @@ const handleDonation = async (payment) => {
     while(typeof data == 'undefined'){
         try{
             console.log("fetch new projects Data");
-            data = db.get('projects').value()
             // TODO: GET NEW PROJET DONATION ADDRESSES
-            // data = await fetchData()
+            data = await fetchData()
         }catch(e){}
         await new Promise(resolve => setTimeout(resolve, 20000))
     }
@@ -180,70 +186,70 @@ const handleDonation = async (payment) => {
     console.log("projects", data)
     console.log("projects count", data.length)
 
-    return
     // make payout
 
     //check if own address is valid
     if(validAddress(IOTAADDRESS)){
         //set address for invalid entries
         data.map(e=> {
-            if(!validAddress(e.address)){
+            if(!validAddress(e.donation_address)){
             e.address = IOTAADDRESS
             }
         })
     }
 
     // 1. get node_with_addresses
-    const all_nodes_with_addresses = data.filter((node) => validAddress(node.address));
+    const all_project_with_addresses = data.filter((project) => validAddress(project.donation_address));
+
 
     //trim spaces
-    for(node of all_nodes_with_addresses){
-        node.address = node.address.trim()
+    for(project of all_project_with_addresses){
+        project.donation_address = project.donation_address.trim()
     }
 
-    console.log("all_nodes_with_addresses count", all_nodes_with_addresses.length)
+    console.log("all_project_with_addresses count", all_project_with_addresses.length)
 
     //remove spent addresses
-    let addresses = all_nodes_with_addresses.map(e => e.address.slice(0, 81))
+    let addresses = all_project_with_addresses.map(e => e.donation_address.slice(0, 81))
     let spentStatus = await wereAddressesSpentFrom(addresses)
-    let nodes_with_addresses = all_nodes_with_addresses.filter((obj, index) => spentStatus[index] == false)
+    let projects_with_addresses = all_project_with_addresses.filter((obj, index) => spentStatus[index] == false)
 
-    // 2. calculate shares
+    // 2. calculate iota for each project
     let total_iotas = payment.txInfo.value
-    let total_points = 0;
+ 
 
-    //calculate total points
-    nodes_with_addresses.forEach(function (object) {
-        total_points = object.points + total_points;
-    })
-
-    //calculate shares, assign rounded iota value and calculate remaining iotas
+    //calculate iota, assign rounded iota value and calculate remaining iotas
     let assigned_iotas = 0
-    nodes_with_addresses.forEach(function (object) {
-        object.share = object.points / nodes_with_addresses.length
-        object.iotas = Math.floor(total_iotas * object.share)
+    let average_iota = Math.floor(total_iotas / projects_with_addresses.length)
+    console.log("average_iota:", average_iota);
+
+    projects_with_addresses.forEach(function (object) {
+        object.iotas = average_iota
         assigned_iotas = object.iotas + assigned_iotas;
     })
     let remaining = total_iotas - assigned_iotas
-    console.log(assigned_iotas);
-    console.log(remaining);
+    console.log("total_iotas:", total_iotas);
+    console.log("assigned_iotas:", assigned_iotas);
+    console.log("remaining", remaining);
 
     //sort by value, highest first
-    nodes_with_addresses.sort((a, b) => b.iotas - a.iotas)
+    projects_with_addresses.sort((a, b) => b.iotas - a.iotas)
 
     //distribute remaining iotas and calculate total amount
     let calculated_total_iotas = 0
-    nodes_with_addresses.map((e, index) => {
+    projects_with_addresses.map((e, index) => {
         index < remaining ? e.iotas += 1 : e.iotas
         calculated_total_iotas = e.iotas + calculated_total_iotas;
     })
 
-    console.log(calculated_total_iotas);
+    console.log("calculated_total_iotas", calculated_total_iotas);
     if (total_iotas != calculated_total_iotas) {
         throw "Assigned iota amount doesn't match total_iotas"
     }
 
-    console.log(nodes_with_addresses);
+    console.log("projects_with_addresses", projects_with_addresses);
+
+    return
 
     //send payouts
     let tag = 'PROJECTS9PAYOUT'
