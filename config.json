@@ -1,6 +1,6 @@
 {
-    "PROVIDER": "https://nodes.devnet.thetangle.org:443",
+    "PROVIDER": "https://nodes.tanglebay.org",
     "URL": "https://ecosystem.iota.org/search_with_tags.json?tags=einfachiota&object_type=project",
     "APP_PORT": 5000,
-    "IOTAADDRESS": "EVDIHVXBAOHIQSZPLFBZZLZLMSLQUADNIJCTYCJSEIMPKFVVGC9X9HJHGHJHOJCVSJIIEZHNFUCOSHOFW"
+    "IOTAADDRESS": "VO9H9GFNRTOLPUHM9MACFWSUFLNLDYCTKIPXCYLTNNNDMURPUIXNVBYQMRKOJDEYM9UDESGXBIWASIDRBFOBHCJGZD"
 }
