@@ -70,13 +70,6 @@ low(adapter)
 
         // GET /root
         app.get('/', (req, res) => {
-
-            let testPayment = {
-                txInfo: {
-                    value: 50
-                }
-            }
-            handleDonation(testPayment)
             const root = db.get('config.root')
                 .value()
             res.send(root)
@@ -214,6 +207,8 @@ const handleDonation = async (payment) => {
     let spentStatus = await wereAddressesSpentFrom(addresses)
     let projects_with_addresses = all_project_with_addresses.filter((obj, index) => spentStatus[index] == false)
 
+    console.log("projects_with_addresses count", projects_with_addresses.length)
+
     // 2. calculate iota for each project
     let total_iotas = payment.txInfo.value
  
@@ -232,44 +227,47 @@ const handleDonation = async (payment) => {
     console.log("assigned_iotas:", assigned_iotas);
     console.log("remaining", remaining);
 
-    //sort by value, highest first
-    projects_with_addresses.sort((a, b) => b.iotas - a.iotas)
-
-    //distribute remaining iotas and calculate total amount
-    let calculated_total_iotas = 0
-    projects_with_addresses.map((e, index) => {
-        index < remaining ? e.iotas += 1 : e.iotas
-        calculated_total_iotas = e.iotas + calculated_total_iotas;
-    })
-
-    console.log("calculated_total_iotas", calculated_total_iotas);
-    if (total_iotas != calculated_total_iotas) {
-        throw "Assigned iota amount doesn't match total_iotas"
-    }
-
     console.log("projects_with_addresses", projects_with_addresses);
+    console.log("projects_with_addresses", projects_with_addresses.length);
 
-    return
+    // send remaining tokens to standart address
 
     //send payouts
     let tag = 'PROJECTS9PAYOUT'
-    for(node of nodes_with_addresses){
+    for(project of projects_with_addresses){
         try {
-            if(node.iotas>0){
+            if(project.iotas>0){
                 let payout = await paymentModule.sendPayout({
-                    address: node.address,
-                    value: node.iotas,
-                    message: `einfachIOTA Project donation payout!\nProject: "${node.name}".`,
+                    address: project.address,
+                    value: project.iotas,
+                    message: `einfachIOTA Project donation payout!\nProject: "${project.name}".`,
                     tag,
-                    data:{nodeId:node.key}
+                    data:{projectUrl:project.eco_url}
                 })
-                console.log(`Payout with ${payout.value} created for project (${node.name}). Address: ${payout.address}`);
+                console.log(`Payout with ${payout.value} created for project (${project.name}). Address: ${payout.address}`);
                 //wait 1 second
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
         } catch (e) {
             console.log(e)
         }
+    }
+
+    try {
+        if(remaining>0){
+            let payout = await paymentModule.sendPayout({
+                address: IOTAADDRESS,
+                value: remaining,
+                message: `einfachIOTA Project donation remaining payout!.`,
+                tag,
+                data:{remaining_payout:remaining}
+            })
+            console.log(`remaining Payout with  ${payout.value} created (${IOTAADDRESS}).`);
+            //wait 1 second
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    } catch (e) {
+        console.log(e)
     }
 
     // return {}
